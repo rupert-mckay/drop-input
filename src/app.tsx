@@ -29,7 +29,7 @@ const FileTable = ({ children: files }: { children: File[] }) =>
 export const App = () => {
 	const [files, setFiles] = useState<File[]>([]);
 
-	const onDrop = (dragEvent: React.DragEvent<HTMLInputElement>) => {
+	const onDrop = (dragEvent: React.DragEvent) => {
 		dragEvent.preventDefault();
 		setFiles((f) => [...f, ...dragEvent.dataTransfer.files]);
 	};
@@ -42,8 +42,20 @@ export const App = () => {
 				capabilities with file inputs. You can see the source here:{" "}
 				<a href="https://github.com/rupert-mckay/drop-input">drop-input</a>
 			</p>
-			<label htmlFor="input">Drop a file on the button below!</label>
-			<input id="input" type="file" onDrop={onDrop}></input>
+			<label
+				style={{ minHeight: "10rem", border: "1px solid black" }}
+				onDrop={(e) => {
+					e.preventDefault();
+					onDrop(e);
+				}}
+				onDragOver={(e) => {
+					e.preventDefault();
+					e.stopPropagation();
+				}}
+			>
+				Drop anywhere in this zone!
+				<input style={{ display: "block" }} type="file" onDrop={onDrop} />
+			</label>
 			<FileTable>{files}</FileTable>
 		</main>
 	);
