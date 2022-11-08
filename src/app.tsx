@@ -28,10 +28,12 @@ const FileTable = ({ children: files }: { children: File[] }) =>
 
 const useDropZone = ({
 	dropZoneRef,
-	onDrop,
+	inputRef,
+	onFilesReceived,
 }: {
 	dropZoneRef: RefObject<HTMLElement>;
-	onDrop: (receivedFiles: FileList) => unknown;
+	inputRef?: RefObject<HTMLInputElement>;
+	onFilesReceived: (receivedFiles: FileList) => unknown;
 }) => {
 	const [isDragActive, setIsDragActive] = useState(false);
 
@@ -45,7 +47,7 @@ const useDropZone = ({
 			setIsDragActive(false);
 			const dataTransfer = event.dataTransfer;
 			if (dataTransfer === null) return;
-			onDrop(dataTransfer.files);
+			onFilesReceived(dataTransfer.files);
 		};
 		const onDragOverEventHandler = (e: Event) => {
 			e.preventDefault();
@@ -71,7 +73,26 @@ const useDropZone = ({
 			dropZoneRefCurrent.removeEventListener("dragenter", onDragEnterHandler);
 			dropZoneRefCurrent.removeEventListener("dragleave", onDragLeaveHandler);
 		};
-	}, [dropZoneRef, onDrop]);
+	}, [dropZoneRef, onFilesReceived]);
+
+	useEffect(() => {
+		if (inputRef === undefined || inputRef.current === null) return;
+		const inputRefCurrent = inputRef.current;
+
+		const onChangeHandler = (e: Event) => {
+			const inputElement = e.currentTarget as HTMLInputElement;
+			const targetFiles = inputElement.files;
+			if (targetFiles === null) return;
+			inputElement.value = "";
+			onFilesReceived(targetFiles);
+		};
+
+		inputRefCurrent.addEventListener("change", onChangeHandler);
+
+		return () => {
+			inputRefCurrent.removeEventListener("change", onChangeHandler);
+		};
+	}, [inputRef, onFilesReceived]);
 
 	return {
 		isDragActive,
@@ -81,13 +102,15 @@ const useDropZone = ({
 export const App = () => {
 	const [files, setFiles] = useState<File[]>([]);
 	const dropZoneRef = useRef<HTMLLabelElement | null>(null);
+	const inputRef = useRef<HTMLInputElement | null>(null);
 
-	const onFileUpload = (files: FileList) => {
+	const onFilesReceived = (files: FileList) => {
 		setFiles((f) => [...f, ...files]);
 	};
 
 	const { isDragActive } = useDropZone({
-		onDrop: onFileUpload,
+		inputRef,
+		onFilesReceived,
 		dropZoneRef,
 	});
 
@@ -108,14 +131,10 @@ export const App = () => {
 			>
 				Drop anywhere in this zone!
 				<input
+					ref={inputRef}
 					style={{ display: "block" }}
 					type="file"
-					onDrop={(e) => onFileUpload(e.dataTransfer.files)}
-					onChange={(e) => {
-						const targetFiles = e.currentTarget.files;
-						if (targetFiles === null) return;
-						onFileUpload(targetFiles);
-					}}
+					multiple
 				/>
 			</label>
 			<FileTable>{files}</FileTable>
