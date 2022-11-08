@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { type RefObject, useEffect, useRef, useState } from "react";
 
 const FileTable = ({ children: files }: { children: File[] }) =>
 	files.length === 0 ? (
@@ -26,39 +26,70 @@ const FileTable = ({ children: files }: { children: File[] }) =>
 		</table>
 	);
 
-const useDropZone = <T extends Element>({
+const useDropZone = ({
+	dropZoneRef,
 	onDrop,
 }: {
-	onDrop: (dragEvent: React.DragEvent<T>) => unknown;
+	dropZoneRef: RefObject<HTMLElement>;
+	onDrop: (receivedFiles: FileList) => unknown;
 }) => {
-	const [isDragActive, setIsDragActive] = useState(false)
+	const [isDragActive, setIsDragActive] = useState(false);
+
+	useEffect(() => {
+		if (dropZoneRef.current === null) {
+			return;
+		}
+		const dropZoneRefCurrent = dropZoneRef.current;
+		const onDropEventHandler = (event: DragEvent) => {
+			event.preventDefault();
+			setIsDragActive(false);
+			const dataTransfer = event.dataTransfer;
+			if (dataTransfer === null) return;
+			onDrop(dataTransfer.files);
+		};
+		const onDragOverEventHandler = (e: Event) => {
+			e.preventDefault();
+			e.stopPropagation();
+		};
+		const onDragEnterHandler = () => {
+			setIsDragActive(true);
+		};
+		const onDragLeaveHandler = () => {
+			setIsDragActive(false);
+		};
+		dropZoneRef.current.addEventListener("drop", onDropEventHandler);
+		dropZoneRef.current.addEventListener("dragover", onDragOverEventHandler);
+		dropZoneRef.current.addEventListener("dragenter", onDragEnterHandler);
+		dropZoneRef.current.addEventListener("dragleave", onDragLeaveHandler);
+
+		return () => {
+			dropZoneRefCurrent.removeEventListener("drop", onDropEventHandler);
+			dropZoneRefCurrent.removeEventListener(
+				"dragover",
+				onDragOverEventHandler
+			);
+			dropZoneRefCurrent.removeEventListener("dragenter", onDragEnterHandler);
+			dropZoneRefCurrent.removeEventListener("dragleave", onDragLeaveHandler);
+		};
+	}, [dropZoneRef, onDrop]);
 
 	return {
-		getProps: () => ({
-			onDrop: (e: React.DragEvent<T>) => {
-				e.preventDefault();
-				setIsDragActive(false);
-				onDrop(e);
-			},
-			onDragOver: (e: React.DragEvent<T>) => {
-				e.preventDefault();
-				e.stopPropagation();
-			},
-			onDragEnter: () => { setIsDragActive(true) },
-			onDragLeave: () => { setIsDragActive(false) },
-		}),
-		isDragActive
-	}
+		isDragActive,
+	};
 };
 
 export const App = () => {
 	const [files, setFiles] = useState<File[]>([]);
+	const dropZoneRef = useRef<HTMLLabelElement | null>(null);
 
-	const onDrop = (dragEvent: React.DragEvent) => {
-		setFiles((f) => [...f, ...dragEvent.dataTransfer.files]);
+	const onFileUpload = (files: FileList) => {
+		setFiles((f) => [...f, ...files]);
 	};
 
-	const { isDragActive, getProps } = useDropZone({ onDrop });
+	const { isDragActive } = useDropZone({
+		onDrop: onFileUpload,
+		dropZoneRef,
+	});
 
 	return (
 		<main className="stack center">
@@ -69,11 +100,23 @@ export const App = () => {
 				<a href="https://github.com/rupert-mckay/drop-input">drop-input</a>
 			</p>
 			<label
-				style={{ minHeight: "10rem", border: isDragActive ? "5px solid red" : "1px dashed black" }}
-				{...getProps()}
+				ref={dropZoneRef}
+				style={{
+					minHeight: "10rem",
+					border: isDragActive ? "5px solid red" : "1px dashed black",
+				}}
 			>
 				Drop anywhere in this zone!
-				<input style={{ display: "block" }} type="file" onDrop={onDrop} />
+				<input
+					style={{ display: "block" }}
+					type="file"
+					onDrop={(e) => onFileUpload(e.dataTransfer.files)}
+					onChange={(e) => {
+						const targetFiles = e.currentTarget.files;
+						if (targetFiles === null) return;
+						onFileUpload(targetFiles);
+					}}
+				/>
 			</label>
 			<FileTable>{files}</FileTable>
 		</main>

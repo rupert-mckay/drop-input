@@ -1,11 +1,12 @@
 {
-  "compilerOptions": {
-    "target": "ES2015",
-    "module": "commonjs",
-    "strict": true,
-    "jsx": "react-jsx",
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true
-  }
+	"compilerOptions": {
+		"target": "ES2015",
+		"module": "commonjs",
+		"strict": true,
+		"jsx": "react-jsx",
+		"esModuleInterop": true,
+		"skipLibCheck": true,
+		"forceConsistentCasingInFileNames": true,
+		"types": []
+	}
 }
