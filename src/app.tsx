@@ -37,6 +37,9 @@ const useDropZone = ({
 }) => {
 	const [isDragActive, setIsDragActive] = useState(false);
 
+	// @see https://stackoverflow.com/a/21002544/5177400
+	const nestingCounter = useRef(0);
+
 	useEffect(() => {
 		if (dropZoneRef.current === null) {
 			return;
@@ -54,10 +57,14 @@ const useDropZone = ({
 			e.stopPropagation();
 		};
 		const onDragEnterHandler = () => {
+			nestingCounter.current += 1;
 			setIsDragActive(true);
 		};
 		const onDragLeaveHandler = () => {
-			setIsDragActive(false);
+			nestingCounter.current -= 1;
+			if (nestingCounter.current === 0) {
+				setIsDragActive(false);
+			}
 		};
 		dropZoneRef.current.addEventListener("drop", onDropEventHandler);
 		dropZoneRef.current.addEventListener("dragover", onDragOverEventHandler);
@@ -124,12 +131,16 @@ export const App = () => {
 			</p>
 			<label
 				ref={dropZoneRef}
+				className="stack"
 				style={{
 					minHeight: "10rem",
 					border: isDragActive ? "5px solid red" : "1px dashed black",
+					display: "flex",
+					justifyContent: "space-around",
+					padding: "var(--space, 1.5rem)",
 				}}
 			>
-				Drop anywhere in this zone!
+				<span>Drop anywhere in this zone!</span>
 				<input
 					ref={inputRef}
 					style={{ display: "block" }}
